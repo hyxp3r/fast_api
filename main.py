@@ -1,12 +1,34 @@
 from enum import Enum
-from typing import List, Optional
-from fastapi import FastAPI
+from typing import Annotated, List, Optional
+import uuid
+from fastapi import Depends, FastAPI
+from fastapi_users import FastAPIUsers
 from pydantic import BaseModel, Field
 
+from auth.manager import get_user_manager
+from auth.auth import auth_backend
+from auth.database import User
+from auth.schemas import UserCreate, UserRead
 
+fastapi_users = FastAPIUsers[User, uuid.UUID](
+    get_user_manager,
+    [auth_backend],
+)
 
 app = FastAPI(
     title = "Test App"
+)
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix="/auth/jwt",
+    tags=["auth"],
+)
+
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix="/auth",
+    tags=["auth"],
 )
 
 
@@ -86,3 +108,17 @@ def add_trades(trades: List[Trade]):
 
     fake_trades.extend(trades)
     return {"status": 200, "data": trades}
+
+
+async def common_parameters(q: str | None = None, skip: int = 0, limit: int = 100):
+    return {"q": q, "skip": skip, "limit": limit}
+
+
+@app.get("/items/")
+async def read_items(commons: Annotated[dict, Depends(common_parameters)]):
+    return commons
+
+
+@app.get("/users/")
+async def read_users(commons: Annotated[dict, Depends(common_parameters)]):
+    return commons
