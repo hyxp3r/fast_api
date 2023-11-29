@@ -40,8 +40,8 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_user_email'), 'user', ['email'], unique=True)
-    op.drop_table('roles')
     op.drop_table('users')
+    op.drop_table('roles')
     # ### end Alembic commands ###
 
 
